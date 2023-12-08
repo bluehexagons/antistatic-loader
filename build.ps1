@@ -1,2 +1,1 @@
-cl Antistatic.cpp /EHsc
-link Antistatic.obj /SUBSYSTEM:WINDOWS
+cl Antistatic.cpp /std:c++17 /EHsc /link /SUBSYSTEM:WINDOWS
