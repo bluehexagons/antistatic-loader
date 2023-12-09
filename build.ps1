@@ -1,1 +1,2 @@
-cl Antistatic.cpp /std:c++17 /EHsc /link /SUBSYSTEM:WINDOWS
+rc antistatic.rc
+cl Antistatic.cpp antistatic.res /std:c++17 /EHsc /analyze /link /SUBSYSTEM:WINDOWS /RELEASE
