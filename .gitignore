@@ -31,8 +31,9 @@
 *.out
 *.app
 
-# Log file
+# Log file and debugging
 debug.txt
+Antistatic.nativecodeanalysis.xml
 
 # Resource file
 antistatic.res
