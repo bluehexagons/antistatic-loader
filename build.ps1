@@ -4,6 +4,14 @@
 # Exit on error
 $ErrorActionPreference = "Stop"
 
+# Build configuration
+$CppStandard = "/std:c++17"
+$WarningFlags = "/W4", "/WX"
+$OptimizationFlags = "/O2"
+$AnalysisFlags = "/analyze"
+$SubsystemFlag = "/SUBSYSTEM:WINDOWS"
+$LinkFlags = "/RELEASE", "/GUARD:CF", "/NXCOMPAT", "/DYNAMICBASE"
+
 Write-Host "Building Antistatic Loader..." -ForegroundColor Cyan
 
 # Create build directories
@@ -22,18 +30,14 @@ if ($LASTEXITCODE -ne 0) {
 # Compile C++ source with optimizations and security features
 Write-Host "Compiling C++ source..." -ForegroundColor Gray
 cl /Fo"build\antistatic.obj" /Fe"bin\Antistatic.exe" "src\Antistatic.cpp" "build\antistatic.res" `
-    /std:c++17 `
+    $CppStandard `
     /EHsc `
-    /W4 `
-    /WX `
-    /O2 `
-    /analyze `
+    $WarningFlags `
+    $OptimizationFlags `
+    $AnalysisFlags `
     /link `
-    /SUBSYSTEM:WINDOWS `
-    /RELEASE `
-    /GUARD:CF `
-    /NXCOMPAT `
-    /DYNAMICBASE
+    $SubsystemFlag `
+    $LinkFlags
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: Compilation failed" -ForegroundColor Red

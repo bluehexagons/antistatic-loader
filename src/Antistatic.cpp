@@ -27,8 +27,12 @@ int WINAPI WinMain(
     _In_ LPSTR lpCmdLine,
     _In_ int nShowCmd
 ) {
-    // Save debug log if possible
+    // Configuration constants
     const std::string logFile = "./debug.txt";
+    const std::string nodeLocation = "./node.exe";
+    const std::string gameEntryPoint = "./app/dist/src/engine.js";
+    
+    // Save debug log if possible
     std::ofstream log(logFile);
     const bool writeLog = log.good();
 
@@ -36,8 +40,6 @@ int WINAPI WinMain(
         log << "Antistatic Loader Starting..." << std::endl;
         log << "Command line: " << (lpCmdLine ? lpCmdLine : "(none)") << std::endl;
     }
-
-    const std::string nodeLocation = "./node.exe";
 
     // Verify node.exe exists
     std::ifstream nodeStream(nodeLocation);
@@ -52,7 +54,7 @@ int WINAPI WinMain(
 
     // Build command line: node.exe with security flags, game script, and any passed arguments
     // For added security, we disallow code generation from strings when running the game
-    std::string commandArgs = " --disallow-code-generation-from-strings ./app/dist/src/engine.js";
+    std::string commandArgs = " --disallow-code-generation-from-strings " + gameEntryPoint;
     
     // Append any command line arguments passed to the loader
     // Note: Arguments are passed through as-is to allow game configuration
@@ -124,19 +126,19 @@ int WINAPI WinMain(
             log << "Error code: " << errorCode << std::endl;
             
             // Get error message from system using RAII for automatic cleanup
-            LPSTR rawMsgBuf = nullptr;
+            LPSTR errorMessageBuffer = nullptr;
             DWORD msgLen = FormatMessageA(
                 FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                 NULL,
                 errorCode,
                 MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                (LPSTR)&rawMsgBuf,
+                (LPSTR)&errorMessageBuffer,
                 0,
                 NULL
             );
             
             // Use smart pointer to ensure LocalFree is called even if exceptions occur
-            std::unique_ptr<char, LocalFreeDeleter> msgBuf(rawMsgBuf);
+            std::unique_ptr<char, LocalFreeDeleter> msgBuf(errorMessageBuffer);
             
             if (msgLen > 0 && msgBuf) {
                 log << "Error message: " << msgBuf.get() << std::endl;
