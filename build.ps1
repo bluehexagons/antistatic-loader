@@ -29,10 +29,28 @@ if ($LASTEXITCODE -ne 0) {
 
 # Compile C++ source with optimizations and security features
 Write-Host "Compiling C++ source..." -ForegroundColor Gray
-cl /Fo"build\antistatic.obj" /Fe"bin\Antistatic.exe" `
-    "src\Antistatic.cpp" "build\antistatic.res" `
-    $CppStandard /EHsc $WarningFlags $OptimizationFlags $AnalysisFlags `
-    /link $SubsystemFlag $LinkFlags
+
+# Build compiler and linker argument lists
+$CompilerArgs = @(
+    "/Fo`"build\antistatic.obj`""
+    "/Fe`"bin\Antistatic.exe`""
+    "src\Antistatic.cpp"
+    "build\antistatic.res"
+    $CppStandard
+    "/EHsc"
+    $WarningFlags
+    $OptimizationFlags
+    $AnalysisFlags
+)
+
+$LinkerArgs = @(
+    "/link"
+    $SubsystemFlag
+    $LinkFlags
+)
+
+# Execute compilation
+& cl $CompilerArgs $LinkerArgs
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: Compilation failed" -ForegroundColor Red

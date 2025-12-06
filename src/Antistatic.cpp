@@ -133,7 +133,7 @@ int WINAPI WinMain(
                 errorCode,
                 MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                 // When using FORMAT_MESSAGE_ALLOCATE_BUFFER, cast address to LPSTR per Win32 API
-                (LPSTR)&errorMessageBuffer,
+                reinterpret_cast<LPSTR>(&errorMessageBuffer),
                 0,
                 NULL
             );
