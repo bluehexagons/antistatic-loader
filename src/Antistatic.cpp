@@ -139,12 +139,11 @@ int WINAPI WinMain(
             std::unique_ptr<void, LocalFreeDeleter> msgBuf(errorMessageBuffer);
             
             if (msgLen > 0 && msgBuf) {
-                // Trim trailing whitespace from error message
-                std::string errorMsg(static_cast<char*>(msgBuf.get()));
-                while (!errorMsg.empty() && (errorMsg.back() == '\n' || errorMsg.back() == '\r' || errorMsg.back() == ' ')) {
-                    errorMsg.pop_back();
-                }
-                if (!errorMsg.empty()) {
+                // Create string from buffer with explicit length and trim trailing whitespace
+                std::string errorMsg(static_cast<char*>(msgBuf.get()), msgLen);
+                size_t end = errorMsg.find_last_not_of(" \n\r\t");
+                if (end != std::string::npos) {
+                    errorMsg.erase(end + 1);
                     log << "Error message: " << errorMsg << std::endl;
                 }
             }
