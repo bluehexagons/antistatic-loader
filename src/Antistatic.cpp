@@ -7,6 +7,7 @@
 
 #ifdef _WIN32
     #include <windows.h>
+    #include <shellapi.h>
     
     // RAII wrapper for LocalFree
     struct LocalFreeDeleter {
@@ -47,13 +48,26 @@ std::string escapeArgument(const std::string& arg) {
     // Windows: wrap in quotes if contains space or special chars
     if (arg.find_first_of(" \t\n\v\"") != std::string::npos) {
         std::string escaped = "\"";
-        for (char c : arg) {
-            if (c == '\"') {
+        for (size_t i = 0; i < arg.length(); ++i) {
+            size_t backslashCount = 0;
+            
+            // Count consecutive backslashes
+            while (i < arg.length() && arg[i] == '\\') {
+                ++backslashCount;
+                ++i;
+            }
+            
+            if (i == arg.length()) {
+                // Backslashes at end: double them
+                escaped.append(backslashCount * 2, '\\');
+            } else if (arg[i] == '\"') {
+                // Backslashes before quote: double them and escape quote
+                escaped.append(backslashCount * 2, '\\');
                 escaped += "\\\"";
-            } else if (c == '\\') {
-                escaped += "\\\\";
             } else {
-                escaped += c;
+                // Normal backslashes: keep as-is
+                escaped.append(backslashCount, '\\');
+                escaped += arg[i];
             }
         }
         escaped += "\"";
@@ -222,7 +236,9 @@ int runLauncher(int argc, char* argv[]) {
     }
 
     // Build command: node with security flags, game script, and arguments
-    std::string commandString = config.nodeLocation + " --disallow-code-generation-from-strings " + config.gameEntryPoint;
+    std::string commandString = escapeArgument(config.nodeLocation) + 
+                                " --disallow-code-generation-from-strings " + 
+                                escapeArgument(config.gameEntryPoint);
     
     // Append command line arguments with proper escaping
     for (int i = 1; i < argc; ++i) {
@@ -245,37 +261,30 @@ int WINAPI WinMain(
     (void)hPrevInstance;
     (void)nShowCmd;
     
-    // Parse lpCmdLine into argc/argv
+    // Use CommandLineToArgvW for proper argument parsing
+    int argc = 0;
+    LPWSTR* argvW = CommandLineToArgvW(GetCommandLineW(), &argc);
+    
+    if (argvW == nullptr) {
+        return 1;
+    }
+    
+    // Convert to narrow strings
     std::vector<std::string> args;
-    if (lpCmdLine && lpCmdLine[0] != '\0') {
-        std::string cmdLine(lpCmdLine);
-        size_t pos = 0;
-        
-        while (pos < cmdLine.length()) {
-            // Skip leading spaces
-            while (pos < cmdLine.length() && cmdLine[pos] == ' ') {
-                ++pos;
-            }
-            if (pos >= cmdLine.length()) break;
-            
-            // Find next space or end
-            size_t end = cmdLine.find(' ', pos);
-            if (end == std::string::npos) {
-                end = cmdLine.length();
-            }
-            
-            std::string arg = cmdLine.substr(pos, end - pos);
-            if (!arg.empty()) {
-                args.push_back(arg);
-            }
-            
-            pos = end + 1;
+    std::vector<char*> argv;
+    
+    for (int i = 0; i < argc; ++i) {
+        int size = WideCharToMultiByte(CP_UTF8, 0, argvW[i], -1, nullptr, 0, nullptr, nullptr);
+        if (size > 0) {
+            std::string arg(size - 1, '\0');
+            WideCharToMultiByte(CP_UTF8, 0, argvW[i], -1, &arg[0], size, nullptr, nullptr);
+            args.push_back(arg);
         }
     }
     
-    // Convert to argc/argv format
-    std::vector<char*> argv;
-    argv.push_back(const_cast<char*>("Antistatic.exe"));
+    LocalFree(argvW);
+    
+    // Build argv array
     for (auto& arg : args) {
         argv.push_back(const_cast<char*>(arg.c_str()));
     }
