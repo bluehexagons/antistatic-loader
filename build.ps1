@@ -48,8 +48,7 @@ $CompilerArgs = @(
 $LinkerArgs = @(
     "/link"
     $SubsystemFlag
-    $LinkFlags
-)
+) + $LinkFlags  # Expand array elements as separate arguments
 
 # Execute compilation using proper array splatting
 & cl @CompilerArgs @LinkerArgs

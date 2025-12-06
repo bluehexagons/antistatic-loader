@@ -139,7 +139,14 @@ int WINAPI WinMain(
             std::unique_ptr<void, LocalFreeDeleter> msgBuf(errorMessageBuffer);
             
             if (msgLen > 0 && msgBuf) {
-                log << "Error message: " << msgBuf.get() << std::endl;
+                // Trim trailing whitespace from error message
+                std::string errorMsg(static_cast<char*>(msgBuf.get()));
+                while (!errorMsg.empty() && (errorMsg.back() == '\n' || errorMsg.back() == '\r' || errorMsg.back() == ' ')) {
+                    errorMsg.pop_back();
+                }
+                if (!errorMsg.empty()) {
+                    log << "Error message: " << errorMsg << std::endl;
+                }
             }
             // Log file automatically closed when it goes out of scope
         }
