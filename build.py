@@ -108,6 +108,7 @@ class Builder:
             "/WX",
             "/O2",
             "/DNDEBUG",
+            "/analyze",
             "/link",
             "/SUBSYSTEM:WINDOWS",
             "/RELEASE",

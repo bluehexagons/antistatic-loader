@@ -41,6 +41,40 @@ struct Config {
     }
 };
 
+// Escape argument for safe command line usage
+std::string escapeArgument(const std::string& arg) {
+#ifdef _WIN32
+    // Windows: wrap in quotes if contains space or special chars
+    if (arg.find_first_of(" \t\n\v\"") != std::string::npos) {
+        std::string escaped = "\"";
+        for (char c : arg) {
+            if (c == '\"') {
+                escaped += "\\\"";
+            } else if (c == '\\') {
+                escaped += "\\\\";
+            } else {
+                escaped += c;
+            }
+        }
+        escaped += "\"";
+        return escaped;
+    }
+    return arg;
+#else
+    // Linux: use single quotes and escape single quotes
+    std::string escaped = "'";
+    for (char c : arg) {
+        if (c == '\'') {
+            escaped += "'\\''";
+        } else {
+            escaped += c;
+        }
+    }
+    escaped += "'";
+    return escaped;
+#endif
+}
+
 bool fileExists(const std::string& path) {
 #ifdef _WIN32
     std::ifstream f(path);
@@ -190,10 +224,10 @@ int runLauncher(int argc, char* argv[]) {
     // Build command: node with security flags, game script, and arguments
     std::string commandString = config.nodeLocation + " --disallow-code-generation-from-strings " + config.gameEntryPoint;
     
-    // Append command line arguments
+    // Append command line arguments with proper escaping
     for (int i = 1; i < argc; ++i) {
         commandString += " ";
-        commandString += argv[i];
+        commandString += escapeArgument(argv[i]);
     }
 
     return runNodeProcess(commandString, log, writeLog);
@@ -215,16 +249,27 @@ int WINAPI WinMain(
     std::vector<std::string> args;
     if (lpCmdLine && lpCmdLine[0] != '\0') {
         std::string cmdLine(lpCmdLine);
-        size_t start = 0;
-        size_t end = 0;
+        size_t pos = 0;
         
-        while (end != std::string::npos) {
-            end = cmdLine.find(' ', start);
-            std::string arg = cmdLine.substr(start, end - start);
+        while (pos < cmdLine.length()) {
+            // Skip leading spaces
+            while (pos < cmdLine.length() && cmdLine[pos] == ' ') {
+                ++pos;
+            }
+            if (pos >= cmdLine.length()) break;
+            
+            // Find next space or end
+            size_t end = cmdLine.find(' ', pos);
+            if (end == std::string::npos) {
+                end = cmdLine.length();
+            }
+            
+            std::string arg = cmdLine.substr(pos, end - pos);
             if (!arg.empty()) {
                 args.push_back(arg);
             }
-            start = end + 1;
+            
+            pos = end + 1;
         }
     }
     
