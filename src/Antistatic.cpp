@@ -1,72 +1,59 @@
-#include <windows.h>
 #include <iostream>
 #include <string>
 #include <fstream>
 #include <vector>
 #include <memory>
+#include <cstring>
 
-// RAII wrapper for LocalFree to ensure proper cleanup
-struct LocalFreeDeleter {
-    void operator()(void* ptr) const {
-        if (ptr) {
-            LocalFree(ptr);
+#ifdef _WIN32
+    #include <windows.h>
+    
+    // RAII wrapper for LocalFree
+    struct LocalFreeDeleter {
+        void operator()(void* ptr) const {
+            if (ptr) {
+                LocalFree(ptr);
+            }
         }
+    };
+#else
+    #include <unistd.h>
+    #include <sys/wait.h>
+    #include <sys/stat.h>
+#endif
+
+// Configuration constants
+struct Config {
+    std::string logFile;
+    std::string nodeLocation;
+    std::string gameEntryPoint;
+    
+    Config() {
+#ifdef _WIN32
+        logFile = "./debug.txt";
+        nodeLocation = "./node.exe";
+        gameEntryPoint = "./app/dist/src/engine.js";
+#else
+        logFile = "./debug.txt";
+        nodeLocation = "./node";
+        gameEntryPoint = "./app/dist/src/engine.js";
+#endif
     }
 };
 
-// This main() is not used when compiled as a Windows GUI application
-// The entry point is WinMain below
-int main() {
-    std::cout << "This launcher must be built as a Windows GUI application." << std::endl;
-    return 0;
+bool fileExists(const std::string& path) {
+#ifdef _WIN32
+    std::ifstream f(path);
+    return f.good();
+#else
+    struct stat buffer;
+    return (stat(path.c_str(), &buffer) == 0);
+#endif
 }
 
-int WINAPI WinMain(
-    _In_ HINSTANCE hInstance,
-    _In_opt_ HINSTANCE hPrevInstance,
-    _In_ LPSTR lpCmdLine,
-    _In_ int nShowCmd
-) {
-    // Configuration constants
-    const std::string logFile = "./debug.txt";
-    const std::string nodeLocation = "./node.exe";
-    const std::string gameEntryPoint = "./app/dist/src/engine.js";
-    
-    // Save debug log if possible
-    std::ofstream log(logFile);
-    const bool writeLog = log.good();
-
-    if (writeLog) {
-        log << "Antistatic Loader Starting..." << std::endl;
-        log << "Command line: " << (lpCmdLine ? lpCmdLine : "(none)") << std::endl;
-    }
-
-    // Verify node.exe exists
-    std::ifstream nodeStream(nodeLocation);
-    if (!nodeStream.good()) {
-        if (writeLog) {
-            log << "ERROR: Unable to find Node.js at " << nodeLocation << std::endl;
-            // Log file automatically closed when it goes out of scope
-        }
-        return 1;
-    }
-    // File stream automatically closed when it goes out of scope
-
-    // Build command line: node.exe with security flags, game script, and any passed arguments
-    // For added security, we disallow code generation from strings when running the game
-    std::string commandArgs = " --disallow-code-generation-from-strings " + gameEntryPoint;
-    
-    // Append any command line arguments passed to the loader
-    // Note: Arguments are passed through as-is to allow game configuration
-    // The game runs with --disallow-code-generation-from-strings for security
-    if (lpCmdLine && lpCmdLine[0] != '\0') {
-        commandArgs += " ";
-        commandArgs += lpCmdLine;
-    }
-
-    const std::string commandString = nodeLocation + commandArgs;
-
-    // Use a vector for safer memory management
+#ifdef _WIN32
+// Windows implementation
+int runNodeProcess(const std::string& commandString, std::ofstream& log, bool writeLog) {
     std::vector<char> command(commandString.begin(), commandString.end());
     command.push_back('\0');
 
@@ -74,72 +61,61 @@ int WINAPI WinMain(
         log << "Executing: " << commandString << std::endl;
     }
 
-    // Initialize process structures
     STARTUPINFO si = {};
     si.cb = sizeof(STARTUPINFO);
     PROCESS_INFORMATION pi = {};
 
-    // Launch the Node.js process
     BOOL success = CreateProcess(
-        NULL,                   // No module name (use command line)
-        command.data(),         // Command line
-        NULL,                   // Process handle not inheritable
-        NULL,                   // Thread handle not inheritable
-        FALSE,                  // Set handle inheritance to FALSE
-        0,                      // No creation flags
-        NULL,                   // Use parent's environment block
-        NULL,                   // Use parent's starting directory
-        &si,                    // Pointer to STARTUPINFO structure
-        &pi                     // Pointer to PROCESS_INFORMATION structure
+        NULL,
+        command.data(),
+        NULL,
+        NULL,
+        FALSE,
+        0,
+        NULL,
+        NULL,
+        &si,
+        &pi
     );
 
     if (success) {
         if (writeLog) {
-            log << "Node.js process created successfully (PID: " << pi.dwProcessId << ")" << std::endl;
+            log << "Node.js process created (PID: " << pi.dwProcessId << ")" << std::endl;
         }
         
-        // Wait for the Node.js process to exit
         WaitForSingleObject(pi.hProcess, INFINITE);
         
-        // Get exit code
         DWORD exitCode = 0;
         GetExitCodeProcess(pi.hProcess, &exitCode);
         
-        // Cleanup process handles
         CloseHandle(pi.hProcess);
         CloseHandle(pi.hThread);
         
         if (writeLog) {
-            log << "Node.js process exited with code: " << exitCode << std::endl;
+            log << "Process exited with code: " << exitCode << std::endl;
         }
-        // Log file automatically closed when it goes out of scope
         
         return static_cast<int>(exitCode);
     } else {
-        // Log detailed error information
         DWORD errorCode = GetLastError();
         if (writeLog) {
-            log << "ERROR: Failed to create Node.js process" << std::endl;
+            log << "ERROR: Failed to create process" << std::endl;
             log << "Error code: " << errorCode << std::endl;
             
-            // Get error message from system using RAII for automatic cleanup
             LPSTR errorMessageBuffer = nullptr;
             DWORD msgLen = FormatMessageA(
                 FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                 NULL,
                 errorCode,
                 MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                // When using FORMAT_MESSAGE_ALLOCATE_BUFFER, cast address to LPSTR per Win32 API
                 reinterpret_cast<LPSTR>(&errorMessageBuffer),
                 0,
                 NULL
             );
             
-            // Use smart pointer to ensure LocalFree is called even if exceptions occur
             std::unique_ptr<void, LocalFreeDeleter> msgBuf(errorMessageBuffer);
             
             if (msgLen > 0 && msgBuf) {
-                // Create string from buffer with explicit length and trim trailing whitespace
                 std::string errorMsg(static_cast<char*>(msgBuf.get()), msgLen);
                 size_t end = errorMsg.find_last_not_of(" \n\r\t");
                 if (end != std::string::npos) {
@@ -147,9 +123,123 @@ int WINAPI WinMain(
                     log << "Error message: " << errorMsg << std::endl;
                 }
             }
-            // Log file automatically closed when it goes out of scope
         }
         
         return 1;
     }
+}
+#else
+// Linux/Unix implementation
+int runNodeProcess(const std::string& commandString, std::ofstream& log, bool writeLog) {
+    if (writeLog) {
+        log << "Executing: " << commandString << std::endl;
+    }
+
+    pid_t pid = fork();
+    
+    if (pid < 0) {
+        if (writeLog) {
+            log << "ERROR: Failed to fork process" << std::endl;
+        }
+        return 1;
+    } else if (pid == 0) {
+        // Child process - execute command
+        execl("/bin/sh", "sh", "-c", commandString.c_str(), nullptr);
+        
+        // If execl returns, it failed
+        std::cerr << "ERROR: Failed to execute command" << std::endl;
+        exit(1);
+    } else {
+        // Parent process - wait for child
+        if (writeLog) {
+            log << "Node.js process created (PID: " << pid << ")" << std::endl;
+        }
+        
+        int status;
+        waitpid(pid, &status, 0);
+        
+        int exitCode = WIFEXITED(status) ? WEXITSTATUS(status) : 1;
+        
+        if (writeLog) {
+            log << "Process exited with code: " << exitCode << std::endl;
+        }
+        
+        return exitCode;
+    }
+}
+#endif
+
+int runLauncher(int argc, char* argv[]) {
+    Config config;
+    
+    std::ofstream log(config.logFile);
+    const bool writeLog = log.good();
+
+    if (writeLog) {
+        log << "Antistatic Loader Starting..." << std::endl;
+        log << "Command line args: " << argc - 1 << std::endl;
+    }
+
+    if (!fileExists(config.nodeLocation)) {
+        if (writeLog) {
+            log << "ERROR: Unable to find Node.js at " << config.nodeLocation << std::endl;
+        }
+        return 1;
+    }
+
+    // Build command: node with security flags, game script, and arguments
+    std::string commandString = config.nodeLocation + " --disallow-code-generation-from-strings " + config.gameEntryPoint;
+    
+    // Append command line arguments
+    for (int i = 1; i < argc; ++i) {
+        commandString += " ";
+        commandString += argv[i];
+    }
+
+    return runNodeProcess(commandString, log, writeLog);
+}
+
+#ifdef _WIN32
+// Windows entry point for GUI application
+int WINAPI WinMain(
+    _In_ HINSTANCE hInstance,
+    _In_opt_ HINSTANCE hPrevInstance,
+    _In_ LPSTR lpCmdLine,
+    _In_ int nShowCmd
+) {
+    (void)hInstance;
+    (void)hPrevInstance;
+    (void)nShowCmd;
+    
+    // Parse lpCmdLine into argc/argv
+    std::vector<std::string> args;
+    if (lpCmdLine && lpCmdLine[0] != '\0') {
+        std::string cmdLine(lpCmdLine);
+        size_t start = 0;
+        size_t end = 0;
+        
+        while (end != std::string::npos) {
+            end = cmdLine.find(' ', start);
+            std::string arg = cmdLine.substr(start, end - start);
+            if (!arg.empty()) {
+                args.push_back(arg);
+            }
+            start = end + 1;
+        }
+    }
+    
+    // Convert to argc/argv format
+    std::vector<char*> argv;
+    argv.push_back(const_cast<char*>("Antistatic.exe"));
+    for (auto& arg : args) {
+        argv.push_back(const_cast<char*>(arg.c_str()));
+    }
+    
+    return runLauncher(static_cast<int>(argv.size()), argv.data());
+}
+#endif
+
+// Standard entry point for console/Linux
+int main(int argc, char* argv[]) {
+    return runLauncher(argc, argv);
 }

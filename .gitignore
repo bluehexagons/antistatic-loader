@@ -41,3 +41,10 @@ Antistatic.nativecodeanalysis.xml
 
 # Resource file
 antistatic.res
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
