@@ -55,6 +55,8 @@ int WINAPI WinMain(
     std::string commandArgs = " --disallow-code-generation-from-strings ./app/dist/src/engine.js";
     
     // Append any command line arguments passed to the loader
+    // Note: Arguments are passed through as-is to allow game configuration
+    // The game runs with --disallow-code-generation-from-strings for security
     if (lpCmdLine && lpCmdLine[0] != '\0') {
         commandArgs += " ";
         commandArgs += lpCmdLine;
@@ -128,7 +130,7 @@ int WINAPI WinMain(
                 NULL,
                 errorCode,
                 MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                reinterpret_cast<LPSTR>(&rawMsgBuf),
+                (LPSTR)&rawMsgBuf,
                 0,
                 NULL
             );
