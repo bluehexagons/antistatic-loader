@@ -6,7 +6,8 @@ $ErrorActionPreference = "Stop"
 
 # Build configuration
 $CppStandard = "/std:c++17"
-$WarningFlags = "/W4", "/WX"
+$WarningLevel = "/W4"
+$WarningsAsErrors = "/WX"
 $OptimizationFlags = "/O2"
 $AnalysisFlags = "/analyze"
 $SubsystemFlag = "/SUBSYSTEM:WINDOWS"
@@ -38,7 +39,8 @@ $CompilerArgs = @(
     "build\antistatic.res"
     $CppStandard
     "/EHsc"
-    $WarningFlags
+    $WarningLevel
+    $WarningsAsErrors
     $OptimizationFlags
     $AnalysisFlags
 )

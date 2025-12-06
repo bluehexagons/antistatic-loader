@@ -46,7 +46,7 @@ int WINAPI WinMain(
     if (!nodeStream.good()) {
         if (writeLog) {
             log << "ERROR: Unable to find Node.js at " << nodeLocation << std::endl;
-            log.close();
+            // Log file automatically closed when it goes out of scope
         }
         return 1;
     }
@@ -112,10 +112,7 @@ int WINAPI WinMain(
         if (writeLog) {
             log << "Node.js process exited with code: " << exitCode << std::endl;
         }
-        
-        if (log.is_open()) {
-            log.close();
-        }
+        // Log file automatically closed when it goes out of scope
         
         return static_cast<int>(exitCode);
     } else {
@@ -139,13 +136,12 @@ int WINAPI WinMain(
             );
             
             // Use smart pointer to ensure LocalFree is called even if exceptions occur
-            std::unique_ptr<char, LocalFreeDeleter> msgBuf(errorMessageBuffer);
+            std::unique_ptr<void, LocalFreeDeleter> msgBuf(errorMessageBuffer);
             
             if (msgLen > 0 && msgBuf) {
                 log << "Error message: " << msgBuf.get() << std::endl;
             }
-            
-            log.close();
+            // Log file automatically closed when it goes out of scope
         }
         
         return 1;
