@@ -75,17 +75,20 @@ std::string escapeArgument(const std::string& arg) {
     }
     return arg;
 #else
-    // Linux: use single quotes and escape single quotes
-    std::string escaped = "'";
-    for (char c : arg) {
-        if (c == '\'') {
-            escaped += "'\\''";
-        } else {
-            escaped += c;
+    // Linux: only escape if contains special shell characters
+    if (arg.find_first_of(" \t\n\v'\"\\$`!*?[](){};<>|&") != std::string::npos) {
+        std::string escaped = "'";
+        for (char c : arg) {
+            if (c == '\'') {
+                escaped += "'\\''";
+            } else {
+                escaped += c;
+            }
         }
+        escaped += "'";
+        return escaped;
     }
-    escaped += "'";
-    return escaped;
+    return arg;
 #endif
 }
 
@@ -206,7 +209,15 @@ int runNodeProcess(const std::string& commandString, std::ofstream& log, bool wr
         int status;
         waitpid(pid, &status, 0);
         
-        int exitCode = WIFEXITED(status) ? WEXITSTATUS(status) : 1;
+        int exitCode;
+        if (WIFEXITED(status)) {
+            exitCode = WEXITSTATUS(status);
+        } else if (WIFSIGNALED(status)) {
+            // Follow Unix convention: 128 + signal number
+            exitCode = 128 + WTERMSIG(status);
+        } else {
+            exitCode = 1;
+        }
         
         if (writeLog) {
             log << "Process exited with code: " << exitCode << std::endl;
