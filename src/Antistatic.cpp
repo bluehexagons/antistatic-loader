@@ -50,7 +50,7 @@ int WINAPI WinMain(
         }
         return 1;
     }
-    nodeStream.close();
+    // File stream automatically closed when it goes out of scope
 
     // Build command line: node.exe with security flags, game script, and any passed arguments
     // For added security, we disallow code generation from strings when running the game

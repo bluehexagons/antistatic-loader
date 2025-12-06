@@ -49,8 +49,8 @@ $LinkerArgs = @(
     $LinkFlags
 )
 
-# Execute compilation
-& cl $CompilerArgs $LinkerArgs
+# Execute compilation using proper array splatting
+& cl @CompilerArgs @LinkerArgs
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: Compilation failed" -ForegroundColor Red
