@@ -5,6 +5,15 @@
 #include <vector>
 #include <memory>
 
+// RAII wrapper for LocalFree to ensure proper cleanup
+struct LocalFreeDeleter {
+    void operator()(void* ptr) const {
+        if (ptr) {
+            LocalFree(ptr);
+        }
+    }
+};
+
 // This main() is not used when compiled as a Windows GUI application
 // The entry point is WinMain below
 int main() {
@@ -112,20 +121,23 @@ int WINAPI WinMain(
             log << "ERROR: Failed to create Node.js process" << std::endl;
             log << "Error code: " << errorCode << std::endl;
             
-            // Get error message from system
-            LPSTR msgBuf = nullptr;
-            FormatMessageA(
+            // Get error message from system using RAII for automatic cleanup
+            LPSTR rawMsgBuf = nullptr;
+            DWORD msgLen = FormatMessageA(
                 FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                 NULL,
                 errorCode,
                 MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                (LPSTR)&msgBuf,
+                reinterpret_cast<LPSTR>(&rawMsgBuf),
                 0,
                 NULL
             );
-            if (msgBuf) {
-                log << "Error message: " << msgBuf << std::endl;
-                LocalFree(msgBuf);
+            
+            // Use smart pointer to ensure LocalFree is called even if exceptions occur
+            std::unique_ptr<char, LocalFreeDeleter> msgBuf(rawMsgBuf);
+            
+            if (msgLen > 0 && msgBuf) {
+                log << "Error message: " << msgBuf.get() << std::endl;
             }
             
             log.close();
