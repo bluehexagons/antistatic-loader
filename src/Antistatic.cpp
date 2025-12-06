@@ -113,18 +113,20 @@ int WINAPI WinMain(
             log << "Error code: " << errorCode << std::endl;
             
             // Get error message from system
-            LPVOID msgBuf;
-            FormatMessage(
+            LPSTR msgBuf = nullptr;
+            FormatMessageA(
                 FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                 NULL,
                 errorCode,
                 MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                (LPTSTR)&msgBuf,
+                (LPSTR)&msgBuf,
                 0,
                 NULL
             );
-            log << "Error message: " << (char*)msgBuf << std::endl;
-            LocalFree(msgBuf);
+            if (msgBuf) {
+                log << "Error message: " << msgBuf << std::endl;
+                LocalFree(msgBuf);
+            }
             
             log.close();
         }
