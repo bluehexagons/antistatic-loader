@@ -2,6 +2,7 @@
 """
 Cross-platform build script for Antistatic Loader
 Supports Windows (MSVC) and Linux (GCC/Clang)
+Supports x86_64 and ARM architectures (including Raspberry Pi, with future Android/iOS support)
 """
 
 import sys
@@ -13,13 +14,18 @@ from pathlib import Path
 
 
 class BuildConfig:
-    """Build configuration for different platforms"""
+    """Build configuration for different platforms and architectures"""
     
     def __init__(self):
         self.system = platform.system()
+        self.machine = platform.machine().lower()
         self.build_dir = Path("build")
         self.bin_dir = Path("bin")
         self.src_file = Path("src/Antistatic.cpp")
+        
+        # Detect architecture
+        self.is_arm = self._detect_arm()
+        self.is_64bit = self._detect_64bit()
         
         if self.system == "Windows":
             self.output_name = "Antistatic.exe"
@@ -27,6 +33,24 @@ class BuildConfig:
         else:
             self.output_name = "antistatic"
             self.resource_file = None
+    
+    def _detect_arm(self):
+        """Detect if running on ARM architecture"""
+        arm_indicators = ['arm', 'aarch64', 'arm64']
+        return any(indicator in self.machine for indicator in arm_indicators)
+    
+    def _detect_64bit(self):
+        """Detect if running on 64-bit architecture"""
+        return '64' in self.machine or self.machine in ['aarch64', 'arm64']
+    
+    def get_arch_description(self):
+        """Get human-readable architecture description"""
+        if self.is_arm:
+            bits = "64-bit" if self.is_64bit else "32-bit"
+            return f"ARM {bits} ({self.machine})"
+        else:
+            bits = "64-bit" if self.is_64bit else "32-bit"
+            return f"x86 {bits} ({self.machine})"
     
     def get_compiler(self):
         """Detect available compiler"""
@@ -37,7 +61,7 @@ class BuildConfig:
                 return "gcc"
             elif shutil.which("clang++"):
                 return "clang"
-        else:  # Linux/Unix
+        else:  # Linux/Unix (including Android in future)
             if shutil.which("g++"):
                 return "gcc"
             elif shutil.which("clang++"):
@@ -124,7 +148,7 @@ class Builder:
             sys.exit(1)
     
     def build_gcc_clang(self):
-        """Build using GCC or Clang (Linux/Unix)"""
+        """Build using GCC or Clang (Linux/Unix/ARM)"""
         compiler_cmd = "g++" if self.compiler == "gcc" else "clang++"
         print(f"Building with {compiler_cmd}...")
         
@@ -146,6 +170,34 @@ class Builder:
         # Platform-specific flags
         if self.config.system == "Linux":
             compiler_args.extend(["-pthread"])
+            
+            # ARM-specific optimizations for Raspberry Pi 4+
+            if self.config.is_arm:
+                if self.config.is_64bit:
+                    # ARMv8 (Raspberry Pi 4/5, modern ARM)
+                    # Use generic ARMv8 flags for broad compatibility
+                    compiler_args.extend([
+                        "-march=armv8-a",
+                        "-mtune=cortex-a72",  # Raspberry Pi 4/5 compatible
+                    ])
+                else:
+                    # ARMv7 (older Raspberry Pi)
+                    compiler_args.extend([
+                        "-march=armv7-a",
+                        "-mfpu=neon-vfpv4",
+                        "-mfloat-abi=hard",
+                    ])
+        
+        # Future: Android NDK support
+        # elif self.config.system == "Android":
+        #     compiler_args.extend(["-fPIE", "-pie"])
+        #     if self.config.is_arm:
+        #         compiler_args.extend(["-march=armv7-a", "-mfloat-abi=softfp"])
+        
+        # Future: iOS/macOS ARM (Apple Silicon) support  
+        # elif self.config.system == "Darwin":
+        #     if self.config.is_arm:
+        #         compiler_args.extend(["-arch", "arm64"])
         
         try:
             subprocess.run(compiler_args, check=True)
@@ -173,6 +225,9 @@ def main():
     
     try:
         config = BuildConfig()
+        print(f"Architecture: {config.get_arch_description()}")
+        print()
+        
         builder = Builder(config)
         builder.build()
         return 0

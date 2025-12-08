@@ -18,9 +18,24 @@
         }
     };
 #else
+    // Unix-like systems: Linux, macOS, iOS, Android
     #include <unistd.h>
     #include <sys/wait.h>
     #include <sys/stat.h>
+    
+    // Platform detection for future use
+    #if defined(__ANDROID__)
+        #define PLATFORM_ANDROID 1
+    #elif defined(__APPLE__)
+        #include <TargetConditionals.h>
+        #if TARGET_OS_IPHONE
+            #define PLATFORM_IOS 1
+        #else
+            #define PLATFORM_MACOS 1
+        #endif
+    #elif defined(__linux__)
+        #define PLATFORM_LINUX 1
+    #endif
 #endif
 
 // Configuration constants
