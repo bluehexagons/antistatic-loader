@@ -36,8 +36,19 @@ class BuildConfig:
     
     def _detect_arm(self):
         """Detect if running on ARM architecture"""
-        arm_indicators = ['arm', 'aarch64', 'arm64']
-        return any(indicator in self.machine for indicator in arm_indicators)
+        machine_lower = self.machine
+        # Check for ARM variants (exact or prefix matching)
+        arm_patterns = [
+            'aarch64',  # ARM 64-bit
+            'arm64',    # ARM 64-bit (alternative name)
+            'armv8',    # ARMv8 prefix
+            'armv7',    # ARMv7 prefix
+            'armv6',    # ARMv6 prefix (older Raspberry Pi)
+        ]
+        # Exact match first, then prefix match
+        if machine_lower in arm_patterns:
+            return True
+        return any(machine_lower.startswith(pattern) for pattern in arm_patterns)
     
     def _detect_64bit(self):
         """Detect if running on 64-bit architecture"""
@@ -171,17 +182,29 @@ class Builder:
         if self.config.system == "Linux":
             compiler_args.extend(["-pthread"])
             
-            # ARM-specific optimizations for Raspberry Pi 4+
+            # ARM-specific optimizations
             if self.config.is_arm:
                 if self.config.is_64bit:
-                    # ARMv8 (Raspberry Pi 4/5, modern ARM)
-                    # Use generic ARMv8 flags for broad compatibility
-                    compiler_args.extend([
-                        "-march=armv8-a",
-                        "-mtune=cortex-a72",  # Raspberry Pi 4/5 compatible
-                    ])
+                    # ARMv8-A (modern 64-bit ARM)
+                    # Use generic ARMv8 with safe tuning for broad compatibility
+                    compiler_args.extend(["-march=armv8-a"])
+                    
+                    # Optimize for Raspberry Pi 4/5 if detected
+                    # Falls back gracefully on other ARMv8 processors
+                    try:
+                        with open('/proc/cpuinfo', 'r') as f:
+                            cpuinfo = f.read()
+                            # Raspberry Pi 4 uses BCM2711 (Cortex-A72)
+                            # Raspberry Pi 5 uses BCM2712 (Cortex-A76)
+                            if 'BCM2711' in cpuinfo or 'Cortex-A72' in cpuinfo:
+                                compiler_args.append("-mtune=cortex-a72")
+                            elif 'BCM2712' in cpuinfo or 'Cortex-A76' in cpuinfo:
+                                compiler_args.append("-mtune=cortex-a76")
+                    except (FileNotFoundError, IOError):
+                        # /proc/cpuinfo not available or unreadable, use generic
+                        pass
                 else:
-                    # ARMv7 (older Raspberry Pi)
+                    # ARMv7-A (32-bit ARM)
                     compiler_args.extend([
                         "-march=armv7-a",
                         "-mfpu=neon-vfpv4",

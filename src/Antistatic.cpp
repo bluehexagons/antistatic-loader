@@ -23,7 +23,11 @@
     #include <sys/wait.h>
     #include <sys/stat.h>
     
-    // Platform detection for future use
+    // Platform detection macros for future platform-specific features
+    // These are currently unused but ready for future enhancements:
+    // - Android: May need different Node.js paths or app data directories
+    // - iOS: May need sandboxing or permission handling
+    // - macOS: May benefit from native app bundle integration
     #if defined(__ANDROID__)
         #define PLATFORM_ANDROID 1
     #elif defined(__APPLE__)
