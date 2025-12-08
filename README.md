@@ -16,7 +16,7 @@ This loader provides a seamless experience for running Antistatic by:
 
 ### Common Requirements
 - Python 3.6+ (for building)
-- Node.js runtime (`node.exe` on Windows, `node` on Linux/ARM)
+- Node.js runtime (`node.exe` on Windows, `node` on Linux including ARM)
 - Game files at `./app/dist/src/engine.js`
 
 ### Platform-Specific Requirements

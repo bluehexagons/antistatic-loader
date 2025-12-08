@@ -188,16 +188,21 @@ class Builder:
                         "-mfloat-abi=hard",
                     ])
         
-        # Future: Android NDK support
+        # Future: Android NDK support (requires cross-compilation setup)
         # elif self.config.system == "Android":
         #     compiler_args.extend(["-fPIE", "-pie"])
         #     if self.config.is_arm:
-        #         compiler_args.extend(["-march=armv7-a", "-mfloat-abi=softfp"])
+        #         if self.config.is_64bit:
+        #             compiler_args.extend(["-march=armv8-a"])
+        #         else:
+        #             compiler_args.extend(["-march=armv7-a", "-mfloat-abi=softfp"])
         
-        # Future: iOS/macOS ARM (Apple Silicon) support  
+        # Future: iOS/macOS ARM (Apple Silicon) support
         # elif self.config.system == "Darwin":
         #     if self.config.is_arm:
         #         compiler_args.extend(["-arch", "arm64"])
+        #     else:
+        #         compiler_args.extend(["-arch", "x86_64"])
         
         try:
             subprocess.run(compiler_args, check=True)
