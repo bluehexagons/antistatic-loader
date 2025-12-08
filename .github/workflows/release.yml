@@ -1,0 +1,118 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      
+      - name: Add MSVC to PATH
+        uses: ilammy/msvc-dev-cmd@v1
+      
+      - name: Build
+        run: python build.py
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: antistatic-windows-amd64
+          path: bin/Antistatic.exe
+          if-no-files-found: error
+
+  build-linux-amd64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential
+      
+      - name: Build
+        run: python3 build.py
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: antistatic-linux-amd64
+          path: bin/antistatic
+          if-no-files-found: error
+
+  build-linux-arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install cross-compilation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+      
+      - name: Build
+        run: |
+          mkdir -p build bin
+          aarch64-linux-gnu-g++ src/Antistatic.cpp -o bin/antistatic \
+            -std=c++17 -Wall -Wextra -Werror -O2 -DNDEBUG -pthread \
+            -march=armv8-a -static-libgcc -static-libstdc++
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: antistatic-linux-arm64
+          path: bin/antistatic
+          if-no-files-found: error
+
+  create-release:
+    needs: [build-windows, build-linux-amd64, build-linux-arm64]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      
+      - name: Prepare release assets
+        run: |
+          cd artifacts
+          mv antistatic-windows-amd64/Antistatic.exe ../Antistatic-windows-amd64.exe
+          mv antistatic-linux-amd64/antistatic ../antistatic-linux-amd64
+          mv antistatic-linux-arm64/antistatic ../antistatic-linux-arm64
+          cd ..
+          chmod +x antistatic-linux-amd64 antistatic-linux-arm64
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            Antistatic-windows-amd64.exe
+            antistatic-linux-amd64
+            antistatic-linux-arm64
+          body: |
+            ## Antistatic Loader ${{ github.ref_name }}
+            
+            Cross-platform launcher for Antistatic game.
+            
+            ### Downloads
+            - **Windows (amd64)**: `Antistatic-windows-amd64.exe`
+            - **Linux (amd64)**: `antistatic-linux-amd64`
+            - **Linux (arm64)**: `antistatic-linux-arm64` - For Raspberry Pi 4/5
+            
+            ### Usage
+            Place the executable in the same directory as your `node` runtime and `app/dist/src/engine.js`.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

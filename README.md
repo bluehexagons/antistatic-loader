@@ -37,7 +37,16 @@ This loader provides a seamless experience for running Antistatic by:
 
 ## Building
 
-### Quick Start
+### Download Pre-built Releases
+
+The easiest way to get Antistatic Loader is to download a pre-built release from the [Releases page](https://github.com/bluehexagons/antistatic-loader/releases).
+
+Available builds:
+- **Windows (amd64)**: `Antistatic-windows-amd64.exe`
+- **Linux (amd64)**: `antistatic-linux-amd64`
+- **Linux (arm64)**: `antistatic-linux-arm64` - For Raspberry Pi 4/5
+
+### Building from Source
 
 Run the Python build script:
 
@@ -45,30 +54,13 @@ Run the Python build script:
 python3 build.py
 ```
 
-The script automatically detects your platform, architecture (x86_64 or ARM), and available compiler, then builds the appropriate executable.
-
-### Raspberry Pi
-
-On Raspberry Pi 4 or later with 64-bit OS:
-
-```bash
-python3 build.py
-```
-
-The build script detects ARM architecture and applies appropriate optimizations for ARMv8 (Cortex-A72).
-
-For 32-bit Raspberry Pi OS, the script uses ARMv7 flags with NEON support.
+The script automatically detects your platform, architecture, and compiler.
 
 ### Manual Build (Advanced)
 
 **Windows with MSVC:**
-```powershell
-.\build.ps1
-```
-
-**Windows with GCC/Clang:**
 ```bash
-g++ src/Antistatic.cpp -o bin/Antistatic.exe -std=c++17 -Wall -Wextra -O2
+python build.py
 ```
 
 **Linux (x86_64):**
@@ -78,12 +70,7 @@ g++ src/Antistatic.cpp -o bin/antistatic -std=c++17 -Wall -Wextra -O2 -pthread
 
 **Linux (ARM64, Raspberry Pi 4+):**
 ```bash
-g++ src/Antistatic.cpp -o bin/antistatic -std=c++17 -Wall -Wextra -O2 -pthread -march=armv8-a -mtune=cortex-a72
-```
-
-**Linux (ARM32, older Raspberry Pi):**
-```bash
-g++ src/Antistatic.cpp -o bin/antistatic -std=c++17 -Wall -Wextra -O2 -pthread -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard
+g++ src/Antistatic.cpp -o bin/antistatic -std=c++17 -Wall -Wextra -O2 -pthread -march=armv8-a
 ```
 
 ## Usage

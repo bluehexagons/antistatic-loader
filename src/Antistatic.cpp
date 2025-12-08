@@ -9,40 +9,17 @@
     #include <windows.h>
     #include <shellapi.h>
     
-    // RAII wrapper for LocalFree
     struct LocalFreeDeleter {
         void operator()(void* ptr) const {
-            if (ptr) {
-                LocalFree(ptr);
-            }
+            if (ptr) LocalFree(ptr);
         }
     };
 #else
-    // Unix-like systems: Linux, macOS, iOS, Android
     #include <unistd.h>
     #include <sys/wait.h>
     #include <sys/stat.h>
-    
-    // Platform detection macros for future platform-specific features
-    // These are currently unused but ready for future enhancements:
-    // - Android: May need different Node.js paths or app data directories
-    // - iOS: May need sandboxing or permission handling
-    // - macOS: May benefit from native app bundle integration
-    #if defined(__ANDROID__)
-        #define PLATFORM_ANDROID 1
-    #elif defined(__APPLE__)
-        #include <TargetConditionals.h>
-        #if TARGET_OS_IPHONE
-            #define PLATFORM_IOS 1
-        #else
-            #define PLATFORM_MACOS 1
-        #endif
-    #elif defined(__linux__)
-        #define PLATFORM_LINUX 1
-    #endif
 #endif
 
-// Configuration constants
 struct Config {
     std::string logFile;
     std::string nodeLocation;
@@ -61,30 +38,23 @@ struct Config {
     }
 };
 
-// Escape argument for safe command line usage
 std::string escapeArgument(const std::string& arg) {
 #ifdef _WIN32
-    // Windows: wrap in quotes if contains space or special chars
     if (arg.find_first_of(" \t\n\v\"") != std::string::npos) {
         std::string escaped = "\"";
         for (size_t i = 0; i < arg.length(); ++i) {
             size_t backslashCount = 0;
-            
-            // Count consecutive backslashes
             while (i < arg.length() && arg[i] == '\\') {
                 ++backslashCount;
                 ++i;
             }
             
             if (i == arg.length()) {
-                // Backslashes at end: double them
                 escaped.append(backslashCount * 2, '\\');
             } else if (arg[i] == '\"') {
-                // Backslashes before quote: double them and escape quote
                 escaped.append(backslashCount * 2, '\\');
                 escaped += "\\\"";
             } else {
-                // Normal backslashes: keep as-is
                 escaped.append(backslashCount, '\\');
                 escaped += arg[i];
             }
@@ -94,7 +64,6 @@ std::string escapeArgument(const std::string& arg) {
     }
     return arg;
 #else
-    // Linux: only escape if contains special shell characters
     if (arg.find_first_of(" \t\n\v'\"\\$`!*?[](){};<>|&") != std::string::npos) {
         std::string escaped = "'";
         for (char c : arg) {
