@@ -81,7 +81,9 @@ class Builder:
             )
             return res_output
         except subprocess.CalledProcessError as e:
-            print(f"ERROR: Resource compilation failed\n{e.stderr}")
+            print("ERROR: Resource compilation failed")
+            if e.stderr:
+                print(e.stderr)
             sys.exit(1)
     
     def build_msvc(self):

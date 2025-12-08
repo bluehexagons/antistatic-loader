@@ -58,9 +58,11 @@ jobs:
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
       
       - name: Build
+        env:
+          CXX: aarch64-linux-gnu-g++
         run: |
           mkdir -p build bin
-          aarch64-linux-gnu-g++ src/Antistatic.cpp -o bin/antistatic \
+          $CXX src/Antistatic.cpp -o bin/antistatic \
             -std=c++17 -Wall -Wextra -Werror -O2 -DNDEBUG -pthread \
             -march=armv8-a -static-libgcc -static-libstdc++
       
