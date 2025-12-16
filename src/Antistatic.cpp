@@ -160,8 +160,9 @@ int runLauncher(int argc, char* argv[]) {
                       " --disallow-code-generation-from-strings " + 
                       escapeArgument(config.gameEntryPoint);
     
-    for (int i = 1; i < argc; ++i)
+    for (int i = 1; i < argc; ++i) {
         cmd += " " + escapeArgument(argv[i]);
+    }
 
     return runNodeProcess(cmd, log, writeLog);
 }
@@ -184,7 +185,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
     LocalFree(argvW);
     
     std::vector<char*> argv;
-    for (auto& arg : args) argv.push_back(&arg[0]);
+    for (auto& arg : args) argv.push_back(const_cast<char*>(arg.c_str()));
     
     return runLauncher(static_cast<int>(argv.size()), argv.data());
 }

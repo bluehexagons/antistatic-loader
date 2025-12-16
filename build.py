@@ -84,7 +84,8 @@ class Builder:
                 if self.config.is_64bit:
                     args.append("-march=armv8-a")
                     try:
-                        cpuinfo = open('/proc/cpuinfo').read()
+                        with open('/proc/cpuinfo', 'r') as f:
+                            cpuinfo = f.read()
                         if 'BCM2711' in cpuinfo or 'Cortex-A72' in cpuinfo:
                             args.append("-mtune=cortex-a72")
                         elif 'BCM2712' in cpuinfo or 'Cortex-A76' in cpuinfo:
