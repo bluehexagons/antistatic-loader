@@ -1,149 +1,34 @@
 # Antistatic Loader
 
-A lightweight cross-platform launcher for the Antistatic game that runs the Node.js-based game without displaying console windows.
+Launches the Antistatic Node.js game without showing console windows.
 
-## Purpose
+## Installation
 
-This loader provides a seamless experience for running Antistatic by:
-- Launching the game without visible terminal/console windows (Windows GUI mode)
-- Running Node.js with security flags enabled (`--disallow-code-generation-from-strings`)
-- Providing debug logging for troubleshooting
-- Passing through command line arguments to the game
-- Properly handling process lifecycle and exit codes
-- Cross-platform support (Windows and Linux)
-
-## Requirements
-
-### Common Requirements
-- Python 3.6+ (for building)
-- Node.js runtime (`node.exe` on Windows, `node` on Linux including ARM)
-- Game files at `./app/dist/src/engine.js`
-
-### Platform-Specific Requirements
-
-**Windows:**
-- Visual Studio Build Tools or Visual Studio with C++ development tools (MSVC), OR
-- MinGW-w64 with GCC, OR
-- Clang for Windows
-
-**Linux (x86_64 and ARM):**
-- GCC (g++) or Clang (clang++)
-- Build essentials: `sudo apt-get install build-essential` (Ubuntu/Debian)
-
-**Raspberry Pi 4/5 (ARM64):**
-- Raspbian/Raspberry Pi OS (64-bit recommended)
-- GCC: `sudo apt-get install build-essential`
-- The build script automatically detects ARM and applies optimizations
+Download pre-built binaries from [Releases](https://github.com/bluehexagons/antistatic-loader/releases):
+- `Antistatic-windows-amd64.exe` - Windows
+- `antistatic-linux-amd64` - Linux x86_64
+- `antistatic-linux-arm64` - Raspberry Pi 4/5
 
 ## Building
-
-### Download Pre-built Releases
-
-The easiest way to get Antistatic Loader is to download a pre-built release from the [Releases page](https://github.com/bluehexagons/antistatic-loader/releases).
-
-Available builds:
-- **Windows (amd64)**: `Antistatic-windows-amd64.exe`
-- **Linux (amd64)**: `antistatic-linux-amd64`
-- **Linux (arm64)**: `antistatic-linux-arm64` - For Raspberry Pi 4/5
-
-### Building from Source
-
-Run the Python build script:
 
 ```bash
 python3 build.py
 ```
 
-The script automatically detects your platform, architecture, and compiler.
-
-### Manual Build (Advanced)
-
-**Windows with MSVC:**
-```bash
-python build.py
-```
-
-**Linux (x86_64):**
-```bash
-g++ src/Antistatic.cpp -o bin/antistatic -std=c++17 -Wall -Wextra -O2 -pthread
-```
-
-**Linux (ARM64, Raspberry Pi 4+):**
-```bash
-g++ src/Antistatic.cpp -o bin/antistatic -std=c++17 -Wall -Wextra -O2 -pthread -march=armv8-a
-```
+Requirements:
+- Python 3.6+
+- C++ compiler (MSVC/GCC/Clang)
 
 ## Usage
 
-Place the compiled executable in the same directory as:
-- `node.exe` (Windows) or `node` (Linux) - Node.js runtime
-- `app/dist/src/engine.js` - The game entry point
+Place the executable next to:
+- `node.exe` (Windows) or `node` (Linux)
+- `app/dist/src/engine.js`
 
-Run the launcher:
+Run: `./antistatic [arguments]`
 
-**Windows:**
-```
-Antistatic.exe [optional game arguments]
-```
-
-**Linux:**
-```
-./antistatic [optional game arguments]
-```
-
-**Raspberry Pi:**
-```
-./antistatic [optional game arguments]
-```
-
-Any command line arguments will be passed through to the Node.js game.
-
-## Build Output
-
-- **Windows:** `bin/Antistatic.exe` (GUI application, no console window)
-- **Linux (x86_64):** `bin/antistatic` (standard executable)
-- **Linux (ARM/Raspberry Pi):** `bin/antistatic` (ARM-optimized executable)
-
-## Debugging
-
-The launcher creates a `debug.txt` file in the current directory with diagnostic information:
-- Startup confirmation
-- Command line arguments
-- Node.js process creation status
-- Process ID and exit code
-- Detailed error messages if launch fails
-
-## Architecture
-
-The launcher uses platform-specific APIs to launch Node.js:
-- **Windows:** Uses `CreateProcess` API with GUI subsystem to avoid console windows
-- **Linux/Unix:** Uses `fork`/`exec` pattern for process creation
-
-The code is architecture-agnostic and supports:
-- **x86_64** (Intel/AMD 64-bit)
-- **ARM64** (ARMv8, Raspberry Pi 4+, modern ARM devices)
-- **ARM32** (ARMv7, older Raspberry Pi models)
-
-Both implementations:
-- Use RAII for automatic resource cleanup
-- Properly propagate exit codes (including Unix signal codes)
-- Provide detailed error logging
-- Support command-line argument forwarding with proper escaping
-
-### Future Platform Support
-
-The codebase includes preprocessor directives for potential future support:
-- **Android:** Platform detection ready (`PLATFORM_ANDROID`)
-- **iOS/macOS:** Platform detection ready (`PLATFORM_IOS`, `PLATFORM_MACOS`)
-- ARM compiler flags structured for easy Android NDK integration
-
-## Security
-
-The launcher enforces security by default:
-- Always runs Node.js with `--disallow-code-generation-from-strings` flag
-- Uses modern C++17 features for memory safety
-- Compiled with security flags (DEP, ASLR, CFG on Windows)
+Arguments are passed to the Node.js game. Debug output is written to `debug.txt`.
 
 ## License
 
-See [LICENSE](LICENSE) file for details.
+See [LICENSE](LICENSE) file.
