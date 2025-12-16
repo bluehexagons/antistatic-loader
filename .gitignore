@@ -31,9 +31,20 @@
 *.out
 *.app
 
+# Build directories
+build/
+bin/
+
 # Log file and debugging
 debug.txt
 Antistatic.nativecodeanalysis.xml
 
 # Resource file
 antistatic.res
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
